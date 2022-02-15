@@ -1,2 +1,2 @@
-# Domain
-Laravel Domain Driven Design
+# Laravel 9
+Laravel 9 Example
