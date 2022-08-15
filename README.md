@@ -1,2 +1,2 @@
-# Laravel 9
-Laravel 9 Example
+# Implement Laravel Framework
+Laravel Example
