@@ -78,7 +78,7 @@ COPY . /var/www/html
 WORKDIR /var/www/html
 
 # Run everything after as non-privileged user.
-# USER www
+USER www
 
 # Expose port 9000 and start php-fpm server
 EXPOSE 9000

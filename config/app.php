@@ -4,6 +4,10 @@ use Illuminate\Support\Facades\Facade;
 
 return [
 
+    'code' => env('APP_CODE', 'DEV'),
+    'locales' => ['en'],
+    'domain' => str_replace(['http://', 'https://'], ['', ''], env('APP_URL', 'http://localhost')),
+
     /*
     |--------------------------------------------------------------------------
     | Application Name
