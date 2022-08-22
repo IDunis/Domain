@@ -15,7 +15,7 @@ import { db } from "~/utils/db.server";
 import {
   getUserId,
   requireUserId,
-} from "~/utils/session.server";
+} from "~/utils/auth.server";
 import { JokeDisplay } from "~/components/joke";
 
 export const meta: MetaFunction = ({
@@ -69,7 +69,7 @@ export const action: ActionFunction = async ({
       { status: 400 }
     );
   }
-  const userId = await requireUserId(request);
+  const userId = await getUserId(request);
   const joke = await db.joke.findUnique({
     where: { id: params.jokeId },
   });

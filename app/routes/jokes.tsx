@@ -11,15 +11,16 @@ import {
 } from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
-import { getUser } from "~/utils/session.server";
+// import { getUser } from "~/utils/session.server";
 import stylesUrl from "~/styles/jokes.css";
+import { requireUserId } from "~/utils/auth.server";
 
 export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
 };
 
 type LoaderData = {
-  user: Awaited<ReturnType<typeof getUser>>;
+  user: Awaited<ReturnType<typeof requireUserId>>;
   jokeListItems: Array<{ id: string; name: string }>;
 };
 
@@ -31,7 +32,9 @@ export const loader: LoaderFunction = async ({
     orderBy: { createdAt: "desc" },
     select: { id: true, name: true },
   });
-  const user = await getUser(request);
+
+  // const user = await getUser(request);
+  const user = await requireUserId(request);
 
   const data: LoaderData = {
     jokeListItems,

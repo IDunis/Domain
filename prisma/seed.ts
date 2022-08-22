@@ -26,10 +26,12 @@ function getJokes() {
   return [
     {
       name: "Road worker",
+      email: "1@gmail.com",
       content: `I never wanted to believe that my Dad was stealing from his job as a road worker. But when I got home, all the signs were there.`,
     },
     {
       name: "Frisbee",
+      email: "2@gmail.com",
       content: `I was wondering why the frisbee was getting bigger, then it hit me.`,
     },
     {

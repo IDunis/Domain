@@ -13,9 +13,16 @@ import {
 import { db } from "~/utils/db.server";
 import {
   createUserSession,
-  login,
-  register,
+  // login,
+  // register,
 } from "~/utils/session.server";
+import { login, register } from "~/utils/auth.server";
+import {
+  validateEmail,
+  validateName,
+  validateUsername,
+  validatePassword,
+} from "~/utils/validators.server";
 import stylesUrl from "~/styles/login.css";
 
 export const links: LinksFunction = () => {
@@ -30,17 +37,17 @@ export const meta: MetaFunction = () => {
   };
 };
 
-function validateUsername(username: unknown) {
-  if (typeof username !== "string" || username.length < 3) {
-    return `Usernames must be at least 3 characters long`;
-  }
-}
+// function validateUsername(username: unknown) {
+//   if (typeof username !== "string" || username.length < 3) {
+//     return `Username must be at least 3 characters long`;
+//   }
+// }
 
-function validatePassword(password: unknown) {
-  if (typeof password !== "string" || password.length < 6) {
-    return `Passwords must be at least 6 characters long`;
-  }
-}
+// function validatePassword(password: unknown) {
+//   if (typeof password !== "string" || password.length < 6) {
+//     return `Password must be at least 6 characters long`;
+//   }
+// }
 
 function validateUrl(url: any) {
   let urls = ["/jokes", "/", "https://remix.run"];
@@ -55,11 +62,17 @@ type ActionData = {
   fieldErrors?: {
     username: string | undefined;
     password: string | undefined;
+    email: unknown;
+    firstName: unknown;
+    lastName: unknown;
   };
   fields?: {
     loginType: string;
     username: string;
     password: string;
+    email: unknown;
+    firstName: unknown;
+    lastName: unknown;
   };
 };
 
@@ -73,6 +86,9 @@ export const action: ActionFunction = async ({
   const loginType = form.get("loginType");
   const username = form.get("username");
   const password = form.get("password");
+  const email = form.get("email");
+  const firstName = form.get("firstName");
+  const lastName = form.get("lastName");
   const redirectTo = validateUrl(
     form.get("redirectTo") || "/jokes"
   );
@@ -86,25 +102,41 @@ export const action: ActionFunction = async ({
       formError: `Form not submitted correctly.`,
     });
   }
+  
+  let fields = {};
+  let fieldErrors = {}
+  if (loginType === "register") {
+    fields = { loginType, username, password, email, firstName, lastName };
+    fieldErrors = {
+      username: validateUsername(username),
+      password: validatePassword(password),
+      email: validateEmail(email),
+      firstName: validateName(firstName),
+      lastName: validateName(lastName),
+    };
+  } else {
+    fields = { loginType, username, password };
+    fieldErrors = {
+      username: validateUsername(username),
+      password: validatePassword(password),
+    };
+  }
 
-  const fields = { loginType, username, password };
-  const fieldErrors = {
-    username: validateUsername(username),
-    password: validatePassword(password),
-  };
+  
   if (Object.values(fieldErrors).some(Boolean))
     return badRequest({ fieldErrors, fields });
 
   switch (loginType) {
     case "login": {
       const user = await login({ username, password });
-      if (!user) {
-        return badRequest({
-          fields,
-          formError: `Username/Password combination is incorrect`,
-        });
-      }
-      return createUserSession(user.id, redirectTo);
+      return user;
+      // if (!user) {
+      //   return badRequest({
+      //     fields,
+      //     formError: `Username/Password combination is incorrect`,
+      //   });
+      // }
+      // return createUserSession(user.id, redirectTo);
     }
     case "register": {
       const userExists = await db.user.findFirst({
@@ -116,14 +148,15 @@ export const action: ActionFunction = async ({
           formError: `User with username ${username} already exists`,
         });
       }
-      const user = await register({ username, password });
-      if (!user) {
-        return badRequest({
-          fields,
-          formError: `Something went wrong trying to create a new user.`,
-        });
-      }
-      return createUserSession(user.id, redirectTo);
+      const user = await register({ username, password, email, firstName, lastName });
+      return user;
+      // if (!user) {
+      //   return badRequest({
+      //     fields,
+      //     formError: `Something went wrong trying to create a new user.`,
+      //   });
+      // }
+      // return createUserSession(user.id, redirectTo);
     }
     default: {
       return badRequest({
@@ -232,6 +265,102 @@ export default function Login() {
               </p>
             ) : null}
           </div>
+          {actionData?.fields?.loginType === "register" && (
+            <>
+              <div>
+              <label htmlFor="password-input">Email</label>
+              <input
+                id="password-input"
+                name="email"
+                defaultValue={actionData?.fields?.email}
+                type="email"
+                aria-invalid={
+                  Boolean(
+                    actionData?.fieldErrors?.email
+                  ) || undefined
+                }
+                aria-errormessage={
+                  actionData?.fieldErrors?.email
+                    ? "email-error"
+                    : undefined
+                }
+              />
+              {actionData?.fieldErrors?.email ? (
+                <p
+                  className="form-validation-error"
+                  role="alert"
+                  id="email-error"
+                >
+                  {actionData.fieldErrors.email}
+                </p>
+              ) : null}
+            </div>
+          </>
+          )}
+          {actionData?.fields?.loginType === "register" && (
+            <>
+              <div>
+              <label htmlFor="firstName-input">First Name</label>
+              <input
+                id="firstName-input"
+                name="firstName"
+                defaultValue={actionData?.fields?.firstName}
+                type="text"
+                aria-invalid={
+                  Boolean(
+                    actionData?.fieldErrors?.firstName
+                  ) || undefined
+                }
+                aria-errormessage={
+                  actionData?.fieldErrors?.firstName
+                    ? "firstName-error"
+                    : undefined
+                }
+              />
+              {actionData?.fieldErrors?.firstName ? (
+                <p
+                  className="form-validation-error"
+                  role="alert"
+                  id="firstName-error"
+                >
+                  {actionData.fieldErrors.firstName}
+                </p>
+              ) : null}
+            </div>
+          </>
+          )}
+          {actionData?.fields?.loginType === "register" && (
+            <>
+              <div>
+              <label htmlFor="lastName-input">Last Name</label>
+              <input
+                id="lastName-input"
+                name="lastName"
+                defaultValue={actionData?.fields?.lastName}
+                type="text"
+                aria-invalid={
+                  Boolean(
+                    actionData?.fieldErrors?.lastName
+                  ) || undefined
+                }
+                aria-errormessage={
+                  actionData?.fieldErrors?.lastName
+                    ? "lastName-error"
+                    : undefined
+                }
+              />
+              {actionData?.fieldErrors?.lastName ? (
+                <p
+                  className="form-validation-error"
+                  role="alert"
+                  id="lastName-error"
+                >
+                  {actionData.fieldErrors.lastName}
+                </p>
+              ) : null}
+            </div>
+          </>
+          )}
           <div id="form-error-message">
             {actionData?.formError ? (
               <p

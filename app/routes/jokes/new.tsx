@@ -16,13 +16,14 @@ import { db } from "~/utils/db.server";
 import {
   requireUserId,
   getUserId,
-} from "~/utils/session.server";
+  getUser,
+} from "~/utils/auth.server";
 
 export const loader: LoaderFunction = async ({
   request,
 }) => {
-  const userId = await getUserId(request);
-  if (!userId) {
+  const user = await getUser(request);
+  if (!user) {
     throw new Response("Unauthorized", { status: 401 });
   }
   return json({});
@@ -58,7 +59,7 @@ const badRequest = (data: ActionData) =>
 export const action: ActionFunction = async ({
   request,
 }) => {
-  const userId = await requireUserId(request);
+  const userId = await getUserId(request);
   const form = await request.formData();
   const name = form.get("name");
   const content = form.get("content");

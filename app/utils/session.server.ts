@@ -17,7 +17,7 @@ export async function register({
 }: LoginForm) {
   const passwordHash = await bcrypt.hash(password, 10);
   const user = await db.user.create({
-    data: { username, passwordHash },
+    data: { username, password: passwordHash },
   });
   return { id: user.id, username };
 }
@@ -32,7 +32,7 @@ export async function login({
   if (!user) return null;
   const isCorrectPassword = await bcrypt.compare(
     password,
-    user.passwordHash
+    user.password
   );
   if (!isCorrectPassword) return null;
   return { id: user.id, username };
@@ -45,7 +45,7 @@ if (!sessionSecret) {
 
 const storage = createCookieSessionStorage({
   cookie: {
-    name: "RJ_session",
+    name: "s3cr3t",
     // normally you want this to be `secure: true`
     // but that doesn't work on localhost for Safari
     // https://web.dev/when-to-use-local-https/
