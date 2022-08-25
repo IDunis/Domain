@@ -1,51 +1,48 @@
-import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
   redirect,
 } from "@remix-run/node";
 
-import { db } from "./db.server";
+// type LoginForm = {
+//   username: string;
+//   password: string;
+// };
 
-type LoginForm = {
-  username: string;
-  password: string;
-};
+// export async function register({
+//   username,
+//   password,
+// }: LoginForm) {
+//   const passwordHash = await bcrypt.hash(password, 10);
+//   const user = await db.user.create({
+//     data: { username, password: passwordHash },
+//   });
+//   return { id: user.id, username };
+// }
 
-export async function register({
-  username,
-  password,
-}: LoginForm) {
-  const passwordHash = await bcrypt.hash(password, 10);
-  const user = await db.user.create({
-    data: { username, password: passwordHash },
-  });
-  return { id: user.id, username };
-}
+// export async function login({
+//   username,
+//   password,
+// }: LoginForm) {
+//   const user = await db.user.findUnique({
+//     where: { username },
+//   });
+//   if (!user) return null;
+//   const isCorrectPassword = await bcrypt.compare(
+//     password,
+//     user.password
+//   );
+//   if (!isCorrectPassword) return null;
+//   return { id: user.id, username };
+// }
 
-export async function login({
-  username,
-  password,
-}: LoginForm) {
-  const user = await db.user.findUnique({
-    where: { username },
-  });
-  if (!user) return null;
-  const isCorrectPassword = await bcrypt.compare(
-    password,
-    user.password
-  );
-  if (!isCorrectPassword) return null;
-  return { id: user.id, username };
-}
-
-const sessionSecret = process.env.SESSION_SECRET;
+const sessionSecret = process.env.SESSION_SECRET
 if (!sessionSecret) {
   throw new Error("SESSION_SECRET must be set");
 }
 
 const storage = createCookieSessionStorage({
   cookie: {
-    name: "s3cr3t",
+    name: "SESSION_SECRET",
     // normally you want this to be `secure: true`
     // but that doesn't work on localhost for Safari
     // https://web.dev/when-to-use-local-https/
@@ -64,50 +61,35 @@ function getUserSession(request: Request) {
 
 export async function getUserId(request: Request) {
   const session = await getUserSession(request);
-  const userId = session.get("userId");
-  if (!userId || typeof userId !== "string") return null;
-  return userId;
-}
-
-export async function requireUserId(
-  request: Request,
-  redirectTo: string = new URL(request.url).pathname
-) {
-  const session = await getUserSession(request);
+  
   const userId = session.get("userId");
   if (!userId || typeof userId !== "string") {
-    const searchParams = new URLSearchParams([
-      ["redirectTo", redirectTo],
-    ]);
-    throw redirect(`/login?${searchParams}`);
+    return null;
   }
+  
   return userId;
 }
 
-export async function getUser(request: Request) {
-  const userId = await getUserId(request);
-  if (typeof userId !== "string") {
-    return null;
-  }
+// export async function requireUserId(
+//   request: Request,
+//   redirectTo: string = new URL(request.url).pathname
+// ) {
+//   const userId = await getUserId(request);
+//   if (!userId || typeof userId !== "string") {
+//     const searchParams = new URLSearchParams([
+//       ["redirectTo", redirectTo],
+//     ]);
 
-  try {
-    const user = await db.user.findUnique({
-      where: { id: userId },
-      select: { id: true, username: true },
-    });
-    return user;
-  } catch {
-    throw logout(request);
-  }
-}
+//     throw redirect(`${LOGIN_ROUTE}?${searchParams}`);
+//   }
 
-export async function logout(request: Request) {
-  const session = await getUserSession(request);
-  return redirect("/login", {
-    headers: {
-      "Set-Cookie": await storage.destroySession(session),
-    },
-  });
+//   return userId;
+// }
+
+export async function destroyUserSession(request: Request) {
+  return await storage.destroySession(
+    await getUserSession(request)
+  );
 }
 
 export async function createUserSession(
@@ -116,6 +98,7 @@ export async function createUserSession(
 ) {
   const session = await storage.getSession();
   session.set("userId", userId);
+
   return redirect(redirectTo, {
     headers: {
       "Set-Cookie": await storage.commitSession(session),

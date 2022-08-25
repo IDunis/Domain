@@ -1,134 +1,93 @@
 import type { LoginForm, RegisterForm } from "./types.server";
-import { db } from "./db.server";
 import {
   redirect,
   json,
-  createCookieSessionStorage,
 } from "@remix-run/node";
 import bcrypt from "bcryptjs";
-
+import {
+  getUserId,
+  createUserSession,
+  destroyUserSession,
+} from "./session.server";
+import { db } from "./db.server";
 import { createUser } from "./users.server";
 
-const sessionSecret = process.env.SESSION_SECRET
-if (!sessionSecret) {
-  throw new Error('SESSION_SECRET must be set')
-}
+export const HOME_ROUTE = "/";
+export const LOGIN_ROUTE = "/login";
 
-const storage = createCookieSessionStorage({
-  cookie: {
-    name: 'kudos-session',
-    secure: process.env.NODE_ENV === 'production',
-    secrets: [sessionSecret],
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 60 * 24 * 30,
-    httpOnly: true,
-  },
-})
-
-export async function register(user: RegisterForm) {
-  const exists = await db.user.count({ where: { username: user.username } })
-  if (exists) {
-    return json({ error: `User already exists with that email` }, { status: 400 })
+export async function register(userData: RegisterForm, redirectTo = HOME_ROUTE) {
+  const userExists = await db.user.count({ where: { username: userData.username } });
+  if (userExists) {
+    // return json({ error: `User already exists with that email` }, { status: 400 });
+    return json({error: `User with username ${userData.username} already exists`}, { status: 400 });
   }
 
-  const newUser = await createUser(user);
+  const newUser = await createUser(userData);
   if (!newUser) {
     return json(
       {
         error: `Something went wrong trying to create a new user.`,
-        fields: { email: user.email, password: user.password },
+        fields: { email: userData.email, password: userData.password },
       },
       { status: 400 },
-    )
+    );
   }
-  return createUserSession(newUser.id, '/');
+  
+  return createUserSession(newUser.id, redirectTo);
 }
 
-export async function login({ username, password }: LoginForm) {
-  // 2
+export async function login({ username, password }: LoginForm, redirectTo = HOME_ROUTE) {
   const user = await db.user.findUnique({
     where: { username },
   });
 
   console.log('user', user);
-
-  // 3
   if (!user || !(await bcrypt.compare(password, user.password))) {
-    return json({ error: `Incorrect login` }, { status: 400 })
+    return json({ error: `Incorrect login` }, { status: 400 });
   }
 
-  // 4
-  return createUserSession(user.id, "/jokes");
-}
-
-export async function createUserSession(userId: string, redirectTo: string) {
-  const session = await storage.getSession();
-  session.set('userId', userId);
-
-  return redirect(redirectTo, {
-    headers: {
-      'Set-Cookie': await storage.commitSession(session),
-    },
-  })
+  return createUserSession(user.id, redirectTo);
 }
 
 export async function requireUserId(
   request: Request,
   redirectTo: string = new URL(request.url).pathname
 ) {
-  const session = await getUserSession(request)
-  const userId = session.get('userId')
-  if (!userId || typeof userId !== 'string') {
-    const searchParams = new URLSearchParams([['redirectTo', redirectTo]])
-    throw redirect(`/login?${searchParams}`)
+  const userId = await getUserId(request);
+  
+  if (!userId || typeof userId !== "string") {
+    const searchParams = new URLSearchParams([
+      ["redirectTo", redirectTo],
+    ]);
+    
+    throw redirect(`${LOGIN_ROUTE}?${searchParams}`);
+  }
+  
+  return userId;
+}
+
+export async function getUser(request: Request) {
+  const userId = await getUserId(request);
+  if (typeof userId !== "string") {
+    return null;
   }
 
   try {
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { id: true, username: true },
+      select: { id: true, email: true, username: true },
     });
+
     return user;
   } catch {
     throw logout(request);
   }
-
-}
-
-function getUserSession(request: Request) {
-  return storage.getSession(request.headers.get('Cookie'))
-}
-
-export async function getUserId(request: Request) {
-  const session = await getUserSession(request)
-  const userId = session.get('userId')
-  if (!userId || typeof userId !== 'string') return null
-  return userId
-}
-
-export async function getUser(request: Request) {
-  const userId = await getUserId(request)
-  if (typeof userId !== 'string') {
-    return null
-  }
-
-  try {
-    const user = await db.user.findUnique({
-      where: { id: userId },
-      select: { id: true, email: true },
-    })
-    return user
-  } catch {
-    throw logout(request)
-  }
 }
 
 export async function logout(request: Request) {
-  const session = await getUserSession(request)
-  return redirect('/login', {
+  return redirect(LOGIN_ROUTE, {
     headers: {
-      'Set-Cookie': await storage.destroySession(session),
+      'Set-Cookie': await destroyUserSession(request),
     },
-  })
+  });
 }

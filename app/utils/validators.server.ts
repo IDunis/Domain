@@ -18,7 +18,15 @@ export const validateUsername = (name: unknown): string | undefined => {
 }
 
 export const validateName = (name: unknown): string | undefined => {
-  if (typeof name !== "string" || name.length < 3) {
-    return `Username must be at least 3 characters long`;
+  if (typeof name !== "string" || name.length === 0) {
+    return `Field must be required`;
   }
+}
+
+export const validateUrl = (url: string): string => {
+  let urls = ["/jokes", "/", "https://remix.run"];
+  if (urls.includes(url)) {
+    return url;
+  }
+  return "/jokes";
 }

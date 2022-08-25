@@ -1,4 +1,3 @@
-import type { User } from "@prisma/client";
 import type {
   LinksFunction,
   LoaderFunction,
@@ -11,16 +10,18 @@ import {
 } from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
-// import { getUser } from "~/utils/session.server";
 import stylesUrl from "~/styles/jokes.css";
-import { requireUserId } from "~/utils/auth.server";
+import {
+  LOGIN_ROUTE,
+  getUser
+} from "~/utils/auth.server";
 
 export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
 };
 
 type LoaderData = {
-  user: Awaited<ReturnType<typeof requireUserId>>;
+  user: Awaited<ReturnType<typeof getUser>>;
   jokeListItems: Array<{ id: string; name: string }>;
 };
 
@@ -29,13 +30,12 @@ export const loader: LoaderFunction = async ({
 }) => {
   const jokeListItems = await db.joke.findMany({
     take: 5,
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ name: "asc" }, { createdAt: "desc" }],
     select: { id: true, name: true },
   });
-
-  // const user = await getUser(request);
-  const user = await requireUserId(request);
-
+  
+  const user = await getUser(request);
+  
   const data: LoaderData = {
     jokeListItems,
     user,
@@ -70,7 +70,7 @@ export default function JokesRoute() {
               </form>
             </div>
           ) : (
-            <Link to="/login">Login</Link>
+            <Link to={`${LOGIN_ROUTE}`}>Login</Link>
           )}
         </div>
       </header>

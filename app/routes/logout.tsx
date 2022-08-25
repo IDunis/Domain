@@ -4,14 +4,15 @@ import type {
 } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 
-import { logout } from "~/utils/session.server";
+import {
+  logout,
+  HOME_ROUTE,
+} from "~/utils/auth.server";
 
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action: ActionFunction = async ({ request }) => {
   return logout(request);
-};
+}
 
 export const loader: LoaderFunction = async () => {
-  return redirect("/");
-};
+  return redirect(HOME_ROUTE);
+}

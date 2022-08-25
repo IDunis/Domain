@@ -14,20 +14,10 @@ import {
 import { JokeDisplay } from "~/components/joke";
 import { db } from "~/utils/db.server";
 import {
+  LOGIN_ROUTE,
   requireUserId,
-  getUserId,
   getUser,
 } from "~/utils/auth.server";
-
-export const loader: LoaderFunction = async ({
-  request,
-}) => {
-  const user = await getUser(request);
-  if (!user) {
-    throw new Response("Unauthorized", { status: 401 });
-  }
-  return json({});
-};
 
 function validateJokeContent(content: string) {
   if (content.length < 10) {
@@ -53,29 +43,37 @@ type ActionData = {
   };
 };
 
-const badRequest = (data: ActionData) =>
-  json(data, { status: 400 });
+const badRequest = (data: ActionData) => json(data, { status: 400 });
 
-export const action: ActionFunction = async ({
+export const loader: LoaderFunction = async ({
   request,
 }) => {
-  const userId = await getUserId(request);
+  const user = await getUser(request);
+  if (!user) {
+    throw new Response("Unauthorized", { status: 401 });
+  }
+  
+  return json({});
+};
+
+export const action: ActionFunction = async ({ request }) => {
+  const userId = await requireUserId(request);
   const form = await request.formData();
   const name = form.get("name");
   const content = form.get("content");
+
   if (
     typeof name !== "string" ||
     typeof content !== "string"
   ) {
-    return badRequest({
-      formError: `Form not submitted correctly.`,
-    });
+    return badRequest({ formError: `Form not submitted correctly.` });
   }
 
   const fieldErrors = {
     name: validateJokeName(name),
     content: validateJokeContent(content),
   };
+
   const fields = { name, content };
   if (Object.values(fieldErrors).some(Boolean)) {
     return badRequest({ fieldErrors, fields });
@@ -84,6 +82,7 @@ export const action: ActionFunction = async ({
   const joke = await db.joke.create({
     data: { ...fields, jokesterId: userId },
   });
+  
   return redirect(`/jokes/${joke.id}`);
 };
 
@@ -195,7 +194,7 @@ export function CatchBoundary() {
     return (
       <div className="error-container">
         <p>You must be logged in to create a joke.</p>
-        <Link to="/login">Login</Link>
+        <Link to={`${LOGIN_ROUTE}`}>Login</Link>
       </div>
     );
   }

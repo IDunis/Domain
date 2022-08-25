@@ -1,29 +1,34 @@
-import type {
+import {
   ActionFunction,
+  LoaderFunction,
   LinksFunction,
   MetaFunction,
+  redirect,
 } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import {
   useActionData,
+  useTransition,
   useSearchParams,
   Link,
 } from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
 import {
-  createUserSession,
-  // login,
-  // register,
-} from "~/utils/session.server";
-import { login, register } from "~/utils/auth.server";
+  HOME_ROUTE,
+  getUser,
+  login,
+  register,
+} from "~/utils/auth.server";
 import {
   validateEmail,
   validateName,
   validateUsername,
   validatePassword,
+  validateUrl,
 } from "~/utils/validators.server";
 import stylesUrl from "~/styles/login.css";
+import { useEffect, useRef, useState } from "react";
 
 export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
@@ -49,87 +54,122 @@ export const meta: MetaFunction = () => {
 //   }
 // }
 
-function validateUrl(url: any) {
-  let urls = ["/jokes", "/", "https://remix.run"];
-  if (urls.includes(url)) {
-    return url;
-  }
-  return "/jokes";
-}
+// function validateUrl(url: any) {
+//   let urls = ["/jokes", "/", "https://remix.run"];
+//   if (urls.includes(url)) {
+//     return url;
+//   }
+
+//   return "/jokes";
+// }
 
 type ActionData = {
   formError?: string;
   fieldErrors?: {
-    username: string | undefined;
-    password: string | undefined;
-    email: unknown;
-    firstName: unknown;
-    lastName: unknown;
+    username?: string;
+    password?: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
   };
   fields?: {
-    loginType: string;
-    username: string;
-    password: string;
-    email: unknown;
-    firstName: unknown;
-    lastName: unknown;
+    loginType?: string;
+    username?: string;
+    password?: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
   };
 };
 
-const badRequest = (data: ActionData) =>
-  json(data, { status: 400 });
+enum FormType {
+  REGISTER = "register",
+  LOGIN = "login"
+};
 
-export const action: ActionFunction = async ({
-  request,
-}) => {
+const badRequest = (data: ActionData) => json(data, { status: 400 });
+
+export const loader: LoaderFunction = async ({ request }) => {
+  // If there's already a user in the session, redirect to the home page
+  return await getUser(request) ? redirect(HOME_ROUTE) : null
+}
+
+export const action: ActionFunction = async ({ request }) => {
   const form = await request.formData();
-  const loginType = form.get("loginType");
-  const username = form.get("username");
-  const password = form.get("password");
-  const email = form.get("email");
-  const firstName = form.get("firstName");
-  const lastName = form.get("lastName");
-  const redirectTo = validateUrl(
-    form.get("redirectTo") || "/jokes"
-  );
+  const loginType = form.get("loginType") as string;
+  const username = form.get("username") as string;
+  const password = form.get("password") as string;
+  const email = form.get("email") as string;
+  const firstName = form.get("firstName") as string;
+  const lastName = form.get("lastName") as string;
+  // const redirectTo = validateUrl(form.get("redirectTo") as string || HOME_ROUTE);
+  const redirectTo = form.get("redirectTo") as string || HOME_ROUTE;
+
   if (
-    typeof loginType !== "string" ||
-    typeof username !== "string" ||
-    typeof password !== "string" ||
-    typeof redirectTo !== "string"
+    typeof loginType !== "string"
+    || typeof username !== "string"
+    || typeof password !== "string"
   ) {
-    return badRequest({
-      formError: `Form not submitted correctly.`,
-    });
+    return badRequest({ formError: `Form not submitted correctly.` });
+  }
+
+  if (
+    loginType === FormType.REGISTER
+    && (
+      typeof email !== "string"
+      || typeof firstName !== "string"
+      || typeof lastName !== "string"
+    )
+  ) {
+    return badRequest({ formError: `Form not submitted correctly.` });
   }
   
-  let fields = {};
-  let fieldErrors = {}
-  if (loginType === "register") {
-    fields = { loginType, username, password, email, firstName, lastName };
-    fieldErrors = {
-      username: validateUsername(username),
-      password: validatePassword(password),
+  const fields = {
+    loginType,
+    username,
+    password,
+    ...(loginType === FormType.REGISTER ? {
+      email,
+      firstName,
+      lastName,
+    } : {})
+  };
+
+  const fieldErrors = {
+    username: validateUsername(username),
+    password: validatePassword(password),
+    ...(loginType === FormType.REGISTER ? {
       email: validateEmail(email),
       firstName: validateName(firstName),
       lastName: validateName(lastName),
-    };
-  } else {
-    fields = { loginType, username, password };
-    fieldErrors = {
-      username: validateUsername(username),
-      password: validatePassword(password),
-    };
+    } : {})    
+  };
+  // let fields = {};
+  // let fieldErrors = {};
+  // if (loginType === FormType.REGISTER) {
+  //   fields = { loginType, username, password, email, firstName, lastName };
+  //   fieldErrors = {
+  //     username: validateUsername(username),
+  //     password: validatePassword(password),
+  //     email: validateEmail(email),
+  //     firstName: validateName(firstName),
+  //     lastName: validateName(lastName),
+  //   };
+  // } else {
+  //   fields = { loginType, username, password };
+  //   fieldErrors = {
+  //     username: validateUsername(username),
+  //     password: validatePassword(password),
+  //   };
+  // }
+
+  if (Object.values(fieldErrors).some(Boolean)) {
+    return badRequest({ fieldErrors, fields });
   }
 
-  
-  if (Object.values(fieldErrors).some(Boolean))
-    return badRequest({ fieldErrors, fields });
-
   switch (loginType) {
-    case "login": {
-      const user = await login({ username, password });
-      return user;
+    case FormType.LOGIN: {
+      return await login({ username, password }, redirectTo);
       // if (!user) {
       //   return badRequest({
       //     fields,
@@ -138,18 +178,15 @@ export const action: ActionFunction = async ({
       // }
       // return createUserSession(user.id, redirectTo);
     }
-    case "register": {
-      const userExists = await db.user.findFirst({
-        where: { username },
-      });
-      if (userExists) {
-        return badRequest({
-          fields,
-          formError: `User with username ${username} already exists`,
-        });
-      }
-      const user = await register({ username, password, email, firstName, lastName });
-      return user;
+    case FormType.REGISTER: {
+      // const userExists = await db.user.findFirst({ where: { username } });
+      // if (userExists) {
+      //   return badRequest({
+      //     fields,
+      //     formError: `User with username ${username} already exists`,
+      //   });
+      // }
+      return await register({ username, password, email, firstName, lastName }, redirectTo);
       // if (!user) {
       //   return badRequest({
       //     fields,
@@ -167,20 +204,82 @@ export const action: ActionFunction = async ({
   }
 };
 
+function ValidationForm({ error, isSubmitting }: any) {
+  const [show, setShow] = useState(!!error);
+  
+  useEffect(() => {
+    const id = setTimeout(() => {
+      const hasError = !!error;
+      setShow(hasError && !isSubmitting);
+    });
+    return () => clearTimeout(id);
+  }, [error, isSubmitting]);
+
+  return (
+    <div id="form-error-message">
+      <p
+        className="form-validation-error"
+        role="alert"
+      >
+        {error}
+      </p>
+    </div>
+  );
+}
+
+function ValidationMessage({ error, isSubmitting }: any) {
+  const [show, setShow] = useState(!!error);
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      const hasError = !!error;
+      setShow(hasError && !isSubmitting);
+    });
+    return () => clearTimeout(id);
+  }, [error, isSubmitting]);
+
+  return (
+    <p
+      className="form-validation-error"
+      role="alert"
+      style={{
+        opacity: show ? 1 : 0
+      }}
+    >
+      {error}
+    </p>
+  );
+}
+
 export default function Login() {
   const actionData = useActionData<ActionData>();
+  const transition = useTransition();
   const [searchParams] = useSearchParams();
+  const firstLoad = useRef(true);
+
+  const [action, setAction] = useState(actionData?.fields?.loginType || FormType.LOGIN);
+  const [errors, setErrors] = useState(actionData?.fieldErrors || {})
+
+  useEffect(() => {
+    if (!firstLoad.current) {
+      setErrors({});
+    }
+  }, [action]);
+
+  useEffect(() => {
+    // We don't want to reset errors on page load because we want to see them
+    firstLoad.current = false
+  }, []);
+
   return (
     <div className="container">
       <div className="content" data-light="">
-        <h1>Login</h1>
+        <h1 style={{textTransform: "uppercase"}}>{action === FormType.LOGIN ? FormType.LOGIN : FormType.REGISTER}</h1>
         <form method="post">
           <input
             type="hidden"
             name="redirectTo"
-            value={
-              searchParams.get("redirectTo") ?? undefined
-            }
+            value={searchParams.get("redirectTo") ?? undefined}
           />
           <fieldset>
             <legend className="sr-only">
@@ -191,10 +290,8 @@ export default function Login() {
                 type="radio"
                 name="loginType"
                 value="login"
-                defaultChecked={
-                  !actionData?.fields?.loginType ||
-                  actionData?.fields?.loginType === "login"
-                }
+                defaultChecked={action === FormType.LOGIN}
+                onChange={() => setAction(FormType.LOGIN)}
               />{" "}
               Login
             </label>
@@ -203,10 +300,8 @@ export default function Login() {
                 type="radio"
                 name="loginType"
                 value="register"
-                defaultChecked={
-                  actionData?.fields?.loginType ===
-                  "register"
-                }
+                defaultChecked={action === FormType.REGISTER}
+                onChange={() => setAction(FormType.REGISTER)}
               />{" "}
               Register
             </label>
@@ -218,23 +313,14 @@ export default function Login() {
               id="username-input"
               name="username"
               defaultValue={actionData?.fields?.username}
-              aria-invalid={Boolean(
-                actionData?.fieldErrors?.username
-              )}
-              aria-errormessage={
-                actionData?.fieldErrors?.username
-                  ? "username-error"
-                  : undefined
-              }
+              aria-invalid={Boolean(errors?.username)}
+              aria-errormessage={errors?.username ? "username-error" : undefined}
             />
-            {actionData?.fieldErrors?.username ? (
-              <p
-                className="form-validation-error"
-                role="alert"
-                id="username-error"
-              >
-                {actionData.fieldErrors.username}
-              </p>
+            {errors?.username ? (
+              <ValidationMessage
+                isSubmitting={transition.state === "submitting"}
+                error={errors?.username}
+              />
             ) : null}
           </div>
           <div>
@@ -244,28 +330,17 @@ export default function Login() {
               name="password"
               defaultValue={actionData?.fields?.password}
               type="password"
-              aria-invalid={
-                Boolean(
-                  actionData?.fieldErrors?.password
-                ) || undefined
-              }
-              aria-errormessage={
-                actionData?.fieldErrors?.password
-                  ? "password-error"
-                  : undefined
-              }
-            />
-            {actionData?.fieldErrors?.password ? (
-              <p
-                className="form-validation-error"
-                role="alert"
-                id="password-error"
-              >
-                {actionData.fieldErrors.password}
-              </p>
+              aria-invalid={Boolean(errors?.password) || undefined}
+              aria-errormessage={errors?.password ? "password-error" : undefined}
+            />            
+            {errors?.password ? (
+              <ValidationMessage
+                isSubmitting={transition.state === "submitting"}
+                error={errors?.password}
+              />
             ) : null}
           </div>
-          {actionData?.fields?.loginType === "register" && (
+          {action === FormType.REGISTER && (
             <>
               <div>
               <label htmlFor="password-input">Email</label>
@@ -274,30 +349,19 @@ export default function Login() {
                 name="email"
                 defaultValue={actionData?.fields?.email}
                 type="email"
-                aria-invalid={
-                  Boolean(
-                    actionData?.fieldErrors?.email
-                  ) || undefined
-                }
-                aria-errormessage={
-                  actionData?.fieldErrors?.email
-                    ? "email-error"
-                    : undefined
-                }
-              />
-              {actionData?.fieldErrors?.email ? (
-                <p
-                  className="form-validation-error"
-                  role="alert"
-                  id="email-error"
-                >
-                  {actionData.fieldErrors.email}
-                </p>
+                aria-invalid={Boolean(errors?.email) || undefined}
+                aria-errormessage={errors?.email ? "email-error" : undefined}
+              />            
+              {errors?.email ? (
+                <ValidationMessage
+                  isSubmitting={transition.state === "submitting"}
+                  error={errors?.email}
+                />
               ) : null}
             </div>
           </>
           )}
-          {actionData?.fields?.loginType === "register" && (
+          {action === FormType.REGISTER && (
             <>
               <div>
               <label htmlFor="firstName-input">First Name</label>
@@ -306,30 +370,19 @@ export default function Login() {
                 name="firstName"
                 defaultValue={actionData?.fields?.firstName}
                 type="text"
-                aria-invalid={
-                  Boolean(
-                    actionData?.fieldErrors?.firstName
-                  ) || undefined
-                }
-                aria-errormessage={
-                  actionData?.fieldErrors?.firstName
-                    ? "firstName-error"
-                    : undefined
-                }
-              />
-              {actionData?.fieldErrors?.firstName ? (
-                <p
-                  className="form-validation-error"
-                  role="alert"
-                  id="firstName-error"
-                >
-                  {actionData.fieldErrors.firstName}
-                </p>
+                aria-invalid={Boolean(errors?.firstName) || undefined}
+                aria-errormessage={errors?.firstName ? "firstName-error" : undefined}
+              />            
+              {errors?.firstName ? (
+                <ValidationMessage
+                  isSubmitting={transition.state === "submitting"}
+                  error={errors?.firstName}
+                />
               ) : null}
             </div>
           </>
           )}
-          {actionData?.fields?.loginType === "register" && (
+          {action === FormType.REGISTER && (
             <>
               <div>
               <label htmlFor="lastName-input">Last Name</label>
@@ -338,39 +391,24 @@ export default function Login() {
                 name="lastName"
                 defaultValue={actionData?.fields?.lastName}
                 type="text"
-                aria-invalid={
-                  Boolean(
-                    actionData?.fieldErrors?.lastName
-                  ) || undefined
-                }
-                aria-errormessage={
-                  actionData?.fieldErrors?.lastName
-                    ? "lastName-error"
-                    : undefined
-                }
-              />
-              {actionData?.fieldErrors?.lastName ? (
-                <p
-                  className="form-validation-error"
-                  role="alert"
-                  id="lastName-error"
-                >
-                  {actionData.fieldErrors.lastName}
-                </p>
+                aria-invalid={Boolean(errors?.lastName) || undefined}
+                aria-errormessage={errors?.lastName ? "lastName-error" : undefined}
+              />            
+              {errors?.lastName ? (
+                <ValidationMessage
+                  isSubmitting={transition.state === "submitting"}
+                  error={errors?.lastName}
+                />
               ) : null}
             </div>
           </>
-          )}
-          <div id="form-error-message">
-            {actionData?.formError ? (
-              <p
-                className="form-validation-error"
-                role="alert"
-              >
-                {actionData.formError}
-              </p>
-            ) : null}
-          </div>
+          )}            
+          {actionData?.formError ? (
+            <ValidationForm
+              isSubmitting={transition.state === "submitting"}
+              error={actionData?.formError}
+            />
+          ) : null}
           <button type="submit" className="button">
             Submit
           </button>
