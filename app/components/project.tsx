@@ -1,20 +1,22 @@
 import { Link, Form } from "@remix-run/react";
-import type { Joke } from "@prisma/client";
+import type { Project } from "@prisma/client";
 
-export function JokeDisplay({
-  joke,
+export function ProjectDisplay({
+  project,
   isOwner,
   canDelete = true,
 }: {
-  joke: Joke; //Pick<Joke, "content" | "name">;
+  project: Project;//Pick<Project, "domain" | "name" | "code" | "locales">;
   isOwner: boolean;
   canDelete?: boolean;
 }) {
+  const { name, domain, user }: any = project;
+
   return (
     <div>
-      <p>Here's your hilarious joke:</p>
-      <p>{joke.content}</p>
-      <Link to=".">{joke.name} Permalink</Link>
+      <p>{name}</p>
+      <p>{domain}</p>
+      <p>{user.firstName} {user.lastName}</p>
       {isOwner ? (
         <Form method="post">
           <input

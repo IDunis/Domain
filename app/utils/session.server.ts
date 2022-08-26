@@ -13,7 +13,7 @@ import {
 //   password,
 // }: LoginForm) {
 //   const passwordHash = await bcrypt.hash(password, 10);
-//   const user = await db.user.create({
+//   const user = await prisma.user.create({
 //     data: { username, password: passwordHash },
 //   });
 //   return { id: user.id, username };
@@ -23,7 +23,7 @@ import {
 //   username,
 //   password,
 // }: LoginForm) {
-//   const user = await db.user.findUnique({
+//   const user = await prisma.user.findUnique({
 //     where: { username },
 //   });
 //   if (!user) return null;
@@ -80,7 +80,7 @@ export async function getUserId(request: Request) {
 //       ["redirectTo", redirectTo],
 //     ]);
 
-//     throw redirect(`${LOGIN_ROUTE}?${searchParams}`);
+//     throw redirect(`/login?${searchParams}`);
 //   }
 
 //   return userId;

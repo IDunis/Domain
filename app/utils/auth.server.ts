@@ -1,4 +1,7 @@
-import type { LoginForm, RegisterForm } from "./types.server";
+import type {
+  LoginForm,
+  RegisterForm
+} from "./types.server";
 import {
   redirect,
   json,
@@ -9,14 +12,15 @@ import {
   createUserSession,
   destroyUserSession,
 } from "./session.server";
-import { db } from "./db.server";
+import { prisma } from "./prisma.server";
 import { createUser } from "./users.server";
 
 export const HOME_ROUTE = "/";
-export const LOGIN_ROUTE = "/login";
 
 export async function register(userData: RegisterForm, redirectTo = HOME_ROUTE) {
-  const userExists = await db.user.count({ where: { username: userData.username } });
+  const userExists = await prisma.user.count({
+    where: { username: userData.username }
+  });
   if (userExists) {
     // return json({ error: `User already exists with that email` }, { status: 400 });
     return json({error: `User with username ${userData.username} already exists`}, { status: 400 });
@@ -37,11 +41,11 @@ export async function register(userData: RegisterForm, redirectTo = HOME_ROUTE) 
 }
 
 export async function login({ username, password }: LoginForm, redirectTo = HOME_ROUTE) {
-  const user = await db.user.findUnique({
+  const user = await prisma.user.findUnique({
     where: { username },
   });
 
-  console.log('user', user);
+  console.log("user", user);
   if (!user || !(await bcrypt.compare(password, user.password))) {
     return json({ error: `Incorrect login` }, { status: 400 });
   }
@@ -60,7 +64,7 @@ export async function requireUserId(
       ["redirectTo", redirectTo],
     ]);
     
-    throw redirect(`${LOGIN_ROUTE}?${searchParams}`);
+    throw redirect(`/login?${searchParams}`);
   }
   
   return userId;
@@ -73,7 +77,7 @@ export async function getUser(request: Request) {
   }
 
   try {
-    const user = await db.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, email: true, username: true },
     });
@@ -85,9 +89,9 @@ export async function getUser(request: Request) {
 }
 
 export async function logout(request: Request) {
-  return redirect(LOGIN_ROUTE, {
+  return redirect("/login", {
     headers: {
-      'Set-Cookie': await destroyUserSession(request),
+      "Set-Cookie": await destroyUserSession(request),
     },
   });
 }

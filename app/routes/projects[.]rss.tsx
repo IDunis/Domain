@@ -16,10 +16,10 @@ function escapeHtml(s: string) {
 }
 
 export const loader: LoaderFunction = async ({ request }) => {
-  const jokes = await prisma.joke.findMany({
+  const projects = await prisma.project.findMany({
     take: 100,
     orderBy: { createdAt: "desc" },
-    include: { jokester: { select: { username: true } } },
+    include: { user: { select: { username: true } } },
   });
 
   const host =
@@ -32,33 +32,33 @@ export const loader: LoaderFunction = async ({ request }) => {
     ? "http"
     : "https";
   const domain = `${protocol}://${host}`;
-  const jokesUrl = `${domain}/jokes`;
+  const projectsUrl = `${domain}/projects`;
 
   const rssString = `
-    <rss xmlns:blogChannel="${jokesUrl}" version="2.0">
+    <rss xmlns:blogChannel="${projectsUrl}" version="2.0">
       <channel>
-        <title>Remix Jokes</title>
-        <link>${jokesUrl}</link>
-        <description>Some funny jokes</description>
+        <title>Remix Projects</title>
+        <link>${projectsUrl}</link>
+        <description>Some funny projects</description>
         <language>en-us</language>
         <generator>Kody the Koala</generator>
         <ttl>40</ttl>
-        ${jokes
-          .map((joke) =>
+        ${projects
+          .map((project) =>
             `
             <item>
               <title><![CDATA[${escapeCdata(
-                joke.name
+                project.name
               )}]]></title>
-              <description><![CDATA[A funny joke called ${escapeHtml(
-                joke.name
+              <description><![CDATA[A funny project called ${escapeHtml(
+                project.name
               )}]]></description>
               <author><![CDATA[${escapeCdata(
-                joke.jokester.username
+                project.user.username
               )}]]></author>
-              <pubDate>${joke.createdAt.toUTCString()}</pubDate>
-              <link>${jokesUrl}/${joke.id}</link>
-              <guid>${jokesUrl}/${joke.id}</guid>
+              <pubDate>${project.createdAt.toUTCString()}</pubDate>
+              <link>${projectsUrl}/${project.id}</link>
+              <guid>${projectsUrl}/${project.id}</guid>
             </item>
           `.trim()
           )

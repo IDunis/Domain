@@ -13,7 +13,7 @@ import {
   Link,
 } from "@remix-run/react";
 
-import { db } from "~/utils/db.server";
+import { prisma } from "~/utils/prisma.server";
 import {
   HOME_ROUTE,
   getUser,
@@ -142,7 +142,7 @@ export const action: ActionFunction = async ({ request }) => {
       email: validateEmail(email),
       firstName: validateName(firstName),
       lastName: validateName(lastName),
-    } : {})    
+    } : {})
   };
   // let fields = {};
   // let fieldErrors = {};
@@ -179,7 +179,7 @@ export const action: ActionFunction = async ({ request }) => {
       // return createUserSession(user.id, redirectTo);
     }
     case FormType.REGISTER: {
-      // const userExists = await db.user.findFirst({ where: { username } });
+      // const userExists = await prisma.user.findFirst({ where: { username } });
       // if (userExists) {
       //   return badRequest({
       //     fields,
@@ -422,6 +422,9 @@ export default function Login() {
           <li>
             <Link to="/jokes">Jokes</Link>
           </li>
+            <li>
+              <Link to="/projects">Projects</Link>
+            </li>
         </ul>
       </div>
     </div>

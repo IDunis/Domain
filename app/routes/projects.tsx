@@ -19,28 +19,28 @@ export const links: LinksFunction = () => {
 
 type LoaderData = {
   user: Awaited<ReturnType<typeof getUser>>;
-  jokeListItems: Array<{ id: string; name: string }>;
+  items: Array<{ id: string; name: string, code: string, domain: string }>;
 };
 
 export const loader: LoaderFunction = async ({
   request,
 }) => {
-  const jokeListItems = await prisma.joke.findMany({
-    take: 5,
-    orderBy: [{ name: "asc" }, { createdAt: "desc" }],
-    select: { id: true, name: true },
+  const items = await prisma.project.findMany({
+    // take: 5,
+    orderBy: [{ code: "asc" }, { createdAt: "desc" }],
+    select: { id: true, name: true, code: true, domain: true },
   });
   
   const user = await getUser(request);
   
   const data: LoaderData = {
-    jokeListItems,
+    items,
     user,
   };
   return json(data);
 };
 
-export default function JokesRoute() {
+export default function ProjectsRoute() {
   const data = useLoaderData<LoaderData>();
 
   return (
@@ -50,8 +50,8 @@ export default function JokesRoute() {
           <h1 className="home-link">
             <Link
               to="/"
-              title="Remix Jokes"
-              aria-label="Remix Jokes"
+              title="Remix Projects"
+              aria-label="Remix Projects"
             >
               <span className="logo">🤪</span>
               <span className="logo-medium">J🤪KES</span>
@@ -74,12 +74,12 @@ export default function JokesRoute() {
       <main className="jokes-main">
         <div className="container">
           <div className="jokes-list">
-            <Link to=".">Get a random joke</Link>
-            <p>Here are a few more jokes to check out:</p>
+            <Link to=".">Get a random project</Link>
+            <p>Here are a few more projects to check out:</p>
             <ul>
-              {data.jokeListItems.map((joke) => (
-                <li key={joke.id}>
-                  <Link to={joke.id}>{joke.name}</Link>
+              {data.items.map((project) => (
+                <li key={project.id}>
+                  <Link to={project.id}>{project.name}</Link>
                 </li>
               ))}
             </ul>

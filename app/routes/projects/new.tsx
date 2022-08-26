@@ -11,22 +11,22 @@ import {
   useTransition,
 } from "@remix-run/react";
 
-import { JokeDisplay } from "~/components/joke";
-import { prisma } from "~/utils/prisma.server";
+import { ProjectDisplay } from "~/components/project";
 import {
   requireUserId,
   getUser,
 } from "~/utils/auth.server";
+import { createProject } from "~/utils/projects.server";
 
-function validateJokeContent(content: string) {
+function validateProjectDomain(content: string) {
   if (content.length < 10) {
-    return `That joke is too short`;
+    return `That domain is too short`;
   }
 }
 
-function validateJokeName(name: string) {
+function validateProjectName(name: string) {
   if (name.length < 3) {
-    return `That joke's name is too short`;
+    return `That project's name is too short`;
   }
 }
 
@@ -34,17 +34,19 @@ type ActionData = {
   formError?: string;
   fieldErrors?: {
     name: string | undefined;
-    content: string | undefined;
+    domain: string | undefined;
   };
   fields?: {
     name: string;
-    content: string;
+    domain: string;
   };
 };
 
 const badRequest = (data: ActionData) => json(data, { status: 400 });
 
-export const loader: LoaderFunction = async ({ request }) => {
+export const loader: LoaderFunction = async ({
+  request,
+}) => {
   const user = await getUser(request);
   if (!user) {
     throw new Response("Unauthorized", { status: 401 });
@@ -56,50 +58,52 @@ export const loader: LoaderFunction = async ({ request }) => {
 export const action: ActionFunction = async ({ request }) => {
   const userId = await requireUserId(request);
   const form = await request.formData();
-  const name = form.get("name");
-  const content = form.get("content");
+  const name = form.get("name") as string;
+  const code = form.get("code") || name.toUpperCase().replace(' ', '-');
+  const domain = form.get("domain") as string;
+  const locales = form.get("locales") as string || "en";
 
   if (
     typeof name !== "string" ||
-    typeof content !== "string"
+    typeof domain !== "string"
   ) {
     return badRequest({ formError: `Form not submitted correctly.` });
   }
 
   const fieldErrors = {
-    name: validateJokeName(name),
-    content: validateJokeContent(content),
+    name: validateProjectName(name),
+    domain: validateProjectDomain(domain),
   };
 
-  const fields = { name, content };
+  const fields = { name, domain, code, locales };
   if (Object.values(fieldErrors).some(Boolean)) {
     return badRequest({ fieldErrors, fields });
   }
 
-  const joke = await prisma.joke.create({
-    data: { ...fields, jokesterId: userId },
-  });
+  const project = await createProject({ ...fields, userId });
   
-  return redirect(`/jokes/${joke.id}`);
+  return redirect(`/projects/${project.id}`);
 };
 
-export default function NewJokeRoute() {
+export default function NewProjectRoute() {
   const actionData = useActionData<ActionData>();
   const transition = useTransition();
 
   if (transition.submission) {
     const name = transition.submission.formData.get("name");
-    const content =
-      transition.submission.formData.get("content");
+    const domain = transition.submission.formData.get("content");
+    const code = (name as string).toUpperCase().replace(" ", "-");
+    const locales = transition.submission.formData.get("locales") as string || "en";
+    
     if (
       typeof name === "string" &&
-      typeof content === "string" &&
-      !validateJokeContent(content) &&
-      !validateJokeName(name)
+      typeof domain === "string" &&
+      !validateProjectDomain(domain) &&
+      !validateProjectName(name)
     ) {
       return (
-        <JokeDisplay
-          joke={{ name, content }}
+        <ProjectDisplay
+          project={{ name, domain, code, locales }}
           isOwner={true}
           canDelete={false}
         />
@@ -109,7 +113,7 @@ export default function NewJokeRoute() {
 
   return (
     <div>
-      <p>Add your own hilarious joke</p>
+      <p>Add your own hilarious project</p>
       <Form method="post">
         <div>
           <label>
@@ -118,15 +122,8 @@ export default function NewJokeRoute() {
               type="text"
               defaultValue={actionData?.fields?.name}
               name="name"
-              aria-invalid={
-                Boolean(actionData?.fieldErrors?.name) ||
-                undefined
-              }
-              aria-errormessage={
-                actionData?.fieldErrors?.name
-                  ? "name-error"
-                  : undefined
-              }
+              aria-invalid={Boolean(actionData?.fieldErrors?.name) || undefined}
+              aria-errormessage={actionData?.fieldErrors?.name ? "name-error" : undefined}
             />
           </label>
           {actionData?.fieldErrors?.name ? (
@@ -141,28 +138,21 @@ export default function NewJokeRoute() {
         </div>
         <div>
           <label>
-            Content:{" "}
+            Domain:{" "}
             <textarea
-              defaultValue={actionData?.fields?.content}
-              name="content"
-              aria-invalid={
-                Boolean(actionData?.fieldErrors?.content) ||
-                undefined
-              }
-              aria-errormessage={
-                actionData?.fieldErrors?.content
-                  ? "content-error"
-                  : undefined
-              }
+              defaultValue={actionData?.fields?.domain}
+              name="domain"
+              aria-invalid={Boolean(actionData?.fieldErrors?.domain) || undefined}
+              aria-errormessage={actionData?.fieldErrors?.domain ? "domain-error" : undefined}
             />
           </label>
-          {actionData?.fieldErrors?.content ? (
+          {actionData?.fieldErrors?.domain ? (
             <p
               className="form-validation-error"
               role="alert"
-              id="content-error"
+              id="domain-error"
             >
-              {actionData.fieldErrors.content}
+              {actionData.fieldErrors.domain}
             </p>
           ) : null}
         </div>
@@ -190,7 +180,7 @@ export function CatchBoundary() {
   if (caught.status === 401) {
     return (
       <div className="error-container">
-        <p>You must be logged in to create a joke.</p>
+        <p>You must be logged in to create a project.</p>
         <Link to="/login">Login</Link>
       </div>
     );

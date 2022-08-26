@@ -5,35 +5,35 @@ import {
   useCatch,
   Link,
 } from "@remix-run/react";
-import type { Joke } from "@prisma/client";
+import type { Project } from "@prisma/client";
 
 import { prisma } from "~/utils/prisma.server";
 
-type LoaderData = { randomJoke: Joke };
+type LoaderData = { randomProject: Project };
 
 export const loader: LoaderFunction = async () => {
-  const count = await prisma.joke.count();
+  const count = await prisma.project.count();
   const randomRowNumber = Math.floor(Math.random() * count);
-  const [randomJoke] = await prisma.joke.findMany({
+  const [randomProject] = await prisma.project.findMany({
     take: 1,
     skip: randomRowNumber,
   });
-  if (!randomJoke) {
-    throw new Response("No random joke found", { status: 404 });
+  if (!randomProject) {
+    throw new Response("No random project found", { status: 404 });
   }
-  const data: LoaderData = { randomJoke };
+  const data: LoaderData = { randomProject };
   return json(data);
 };
 
-export default function JokesIndexRoute() {
+export default function ProjectsIndexRoute() {
   const data = useLoaderData<LoaderData>();
 
   return (
     <div>
-      <p>Here's a random joke:</p>
-      <p>{data.randomJoke.content}</p>
-      <Link to={data.randomJoke.id}>
-        "{data.randomJoke.name}" Permalink
+      <p>Here's a random project:</p>
+      <p>{data.randomProject.code}</p>
+      <Link to={data.randomProject.id}>
+        "{data.randomProject.name}" Permalink
       </Link>
     </div>
   );
@@ -45,7 +45,7 @@ export function CatchBoundary() {
   if (caught.status === 404) {
     return (
       <div className="error-container">
-        There are no jokes to display.
+        There are no projects to display.
       </div>
     );
   }

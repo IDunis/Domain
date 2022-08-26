@@ -9,43 +9,50 @@ import {
   useCatch,
   useParams,
 } from "@remix-run/react";
-import type { Joke } from "@prisma/client";
+import type { Project } from "@prisma/client";
 import { prisma } from "~/utils/prisma.server";
 import { requireUserId } from "~/utils/auth.server";
-import { JokeDisplay } from "~/components/joke";
+import { ProjectDisplay } from "~/components/project";
+import { getUserId } from "~/utils/session.server";
 
-export const meta: MetaFunction = ({ data }: { data: LoaderData | undefined}) => {
+export const meta: MetaFunction = ({
+  data,
+}: {
+  data: LoaderData | undefined;
+}) => {
   if (!data) {
     return {
-      title: "No joke",
-      description: "No joke found",
+      title: "No project",
+      description: "No project found",
     };
   }
 
   return {
-    title: `"${data.joke.name}" joke`,
-    description: `Enjoy the "${data.joke.name}" joke and much more`,
+    title: `"${data.project.name}" project`,
+    description: `Enjoy the "${data.project.name}" project and much more and more`,
   };
 };
 
-type LoaderData = { joke: Joke; isOwner: boolean };
+type LoaderData = { project: Project; isOwner: boolean };
 
 export const loader: LoaderFunction = async ({
   request,
   params,
 }) => {
-  const userId = await requireUserId(request);
+  // const userId = await requireUserId(request);
+  const userId = await getUserId(request);
 
-  const joke = await prisma.joke.findUnique({
-    where: { id: params.jokeId }
+  const project = await prisma.project.findUnique({
+    where: { id: params.projectId },
+    include: { user: true }
   });
-  if (!joke) {
-    throw new Response("What a joke! Not found.", { status: 404 });
+  if (!project) {
+    throw new Response("What a project! Not found.", { status: 404 });
   }
 
   const data: LoaderData = {
-    joke,
-    isOwner: userId === joke.jokesterId,
+    project,
+    isOwner: userId === project.userId,
   };
   return json(data);
 };
@@ -59,27 +66,26 @@ export const action: ActionFunction = async ({
     throw new Response(`The _method ${form.get("_method")} is not supported`, { status: 400 });
   }
   const userId = await requireUserId(request);
-  const joke = await prisma.joke.findUnique({
-    where: { id: params.jokeId },
+  const project = await prisma.project.findUnique({
+    where: { id: params.projectId },
+    include: { user: true }
   });
-  if (!joke) {
+  if (!project) {
     throw new Response("Can't delete what does not exist", { status: 404 });
   }
-  if (joke.jokesterId !== userId) {
-    throw new Response("Pssh, nice try. That's not your joke", { status: 401 });
+  if (project.userId !== userId) {
+    throw new Response("Pssh, nice try. That's not your project", { status: 401 });
   }
 
-  await prisma.joke.delete({
-    where: { id: params.jokeId }
-  });
-  return redirect("/jokes");
+  await prisma.project.delete({ where: { id: params.projectId } });
+  return redirect("/projects");
 };
 
-export default function JokeRoute() {
+export default function ProjectRoute() {
   const data = useLoaderData<LoaderData>();
 
   return (
-    <JokeDisplay joke={data.joke} isOwner={data.isOwner} />
+    <ProjectDisplay project={data.project} isOwner={data.isOwner} />
   );
 }
 
@@ -98,14 +104,14 @@ export function CatchBoundary() {
     case 404: {
       return (
         <div className="error-container">
-          Huh? What the heck is {params.jokeId}?
+          Huh? What the heck is {params.projectId}?
         </div>
       );
     }
     case 401: {
       return (
         <div className="error-container">
-          Sorry, but {params.jokeId} is not your joke.
+          Sorry, but {params.projectId} is not your project.
         </div>
       );
     }
@@ -118,8 +124,8 @@ export function CatchBoundary() {
 export function ErrorBoundary({ error }: { error: Error }) {
   console.error(error);
 
-  const { jokeId } = useParams();
+  const { projectId } = useParams();
   return (
-    <div className="error-container">{`There was an error loading joke by the id ${jokeId}. Sorry.`}</div>
+    <div className="error-container">{`There was an error loading project by the id ${projectId}. Sorry.`}</div>
   );
 }
