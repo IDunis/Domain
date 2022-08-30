@@ -30,6 +30,9 @@ export default function IndexRoute() {
             <li>
               <Link to="projects">Read Projects</Link>
             </li>
+            <li>
+              <Link to="shops">Read Shops</Link>
+            </li>
           </ul>
         </nav>
       </div>

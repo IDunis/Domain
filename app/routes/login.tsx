@@ -1,3 +1,9 @@
+
+import {
+  useEffect,
+  useRef,
+  useState
+} from "react";
 import {
   ActionFunction,
   LoaderFunction,
@@ -13,13 +19,6 @@ import {
   Link,
 } from "@remix-run/react";
 
-import { prisma } from "~/utils/prisma.server";
-import {
-  HOME_ROUTE,
-  getUser,
-  login,
-  register,
-} from "~/utils/auth.server";
 import {
   validateEmail,
   validateName,
@@ -28,7 +27,7 @@ import {
   validateUrl,
 } from "~/utils/validators.server";
 import stylesUrl from "~/styles/login.css";
-import { useEffect, useRef, useState } from "react";
+import { getAuthenticatedUser, HOME_ROUTE, login, register } from "~/utils/auth.server";
 
 export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
@@ -91,7 +90,7 @@ const badRequest = (data: ActionData) => json(data, { status: 400 });
 
 export const loader: LoaderFunction = async ({ request }) => {
   // If there's already a user in the session, redirect to the home page
-  return await getUser(request) ? redirect(HOME_ROUTE) : null
+  return await getAuthenticatedUser(request) ? redirect(HOME_ROUTE) : null
 }
 
 export const action: ActionFunction = async ({ request }) => {
@@ -424,6 +423,9 @@ export default function Login() {
           </li>
             <li>
               <Link to="/projects">Projects</Link>
+            </li>
+            <li>
+              <Link to="/shops">Shops</Link>
             </li>
         </ul>
       </div>

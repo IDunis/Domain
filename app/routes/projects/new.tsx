@@ -2,7 +2,10 @@ import type {
   ActionFunction,
   LoaderFunction,
 } from "@remix-run/node";
-import { redirect, json } from "@remix-run/node";
+import {
+  redirect,
+  json
+} from "@remix-run/node";
 import {
   Form,
   Link,
@@ -12,11 +15,9 @@ import {
 } from "@remix-run/react";
 
 import { ProjectDisplay } from "~/components/project";
-import {
-  requireUserId,
-  getUser,
-} from "~/utils/auth.server";
-import { createProject } from "~/utils/projects.server";
+import { getAuthenticatedUser } from "~/utils/auth.server";
+import { requireUserId } from "~/utils/middlewares";
+import { prisma } from "~/utils/prisma.server";
 
 function validateProjectDomain(content: string) {
   if (content.length < 10) {
@@ -47,7 +48,7 @@ const badRequest = (data: ActionData) => json(data, { status: 400 });
 export const loader: LoaderFunction = async ({
   request,
 }) => {
-  const user = await getUser(request);
+  const user = await getAuthenticatedUser(request);
   if (!user) {
     throw new Response("Unauthorized", { status: 401 });
   }
@@ -80,7 +81,9 @@ export const action: ActionFunction = async ({ request }) => {
     return badRequest({ fieldErrors, fields });
   }
 
-  const project = await createProject({ ...fields, userId });
+  const project = await prisma.project.create({
+    data: { ...fields, userId },
+  });
   
   return redirect(`/projects/${project.id}`);
 };

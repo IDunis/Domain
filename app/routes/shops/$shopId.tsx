@@ -9,11 +9,11 @@ import {
   useCatch,
   useParams,
 } from "@remix-run/react";
-import type { Project } from "@prisma/client";
+import type { Shop } from "@prisma/client";
 import { getCurrentUserId } from "~/utils/auth.server";
 import { prisma } from "~/utils/prisma.server";
 import { requireUserId } from "~/utils/middlewares";
-import { ProjectDisplay } from "~/components/project";
+import { ShopDisplay } from "~/components/shop";
 
 export const meta: MetaFunction = ({
   data,
@@ -22,18 +22,18 @@ export const meta: MetaFunction = ({
 }) => {
   if (!data) {
     return {
-      title: "No project",
-      description: "No project found",
+      title: "No shop",
+      description: "No shop found",
     };
   }
 
   return {
-    title: `"${data.project.name}" project`,
-    description: `Enjoy the "${data.project.name}" project and much more and more`,
+    title: `"${data.shop.name}" shop`,
+    description: `Enjoy the "${data.shop.name}" shop and much more and more`,
   };
 };
 
-type LoaderData = { project: Project; isOwner: boolean };
+type LoaderData = { project: Shop; isOwner: boolean };
 
 export const loader: LoaderFunction = async ({
   request,
@@ -41,18 +41,18 @@ export const loader: LoaderFunction = async ({
 }) => {
   // const userId = await requireUserId(request);
   const userId = await getCurrentUserId(request);
-  const project = await prisma.project.findUnique({
-    where: { id: params.projectId },
+  const shop = await prisma.shop.findUnique({
+    where: { id: params.shopId },
     include: { user: true }
   });
 
-  if (!project) {
-    throw new Response("What a project! Not found.", { status: 404 });
+  if (!shop) {
+    throw new Response("What a shop! Not found.", { status: 404 });
   }
 
   const data: LoaderData = {
-    project,
-    isOwner: userId === project.userId,
+    shop,
+    isOwner: userId === shop.userId,
   };
   return json(data);
 };
@@ -66,29 +66,29 @@ export const action: ActionFunction = async ({
     throw new Response(`The _method ${form.get("_method")} is not supported`, { status: 400 });
   }
   const userId = await requireUserId(request);
-  const project = await prisma.project.findUnique({
-    where: { id: params.projectId },
+  const shop = await prisma.shop.findUnique({
+    where: { id: params.shopId },
     include: { user: true }
   });
 
-  if (!project) {
+  if (!shop) {
     throw new Response("Can't delete what does not exist", { status: 404 });
   }
 
-  if (project.userId !== userId) {
-    throw new Response("Pssh, nice try. That's not your project", { status: 401 });
+  if (shop.userId !== userId) {
+    throw new Response("Pssh, nice try. That's not your shop", { status: 401 });
   }
 
-  await prisma.project.delete({ where: { id: params.projectId } });
+  await prisma.shop.delete({ where: { id: params.shopId } });
   
-  return redirect("/projects");
+  return redirect("/shops");
 };
 
-export default function ProjectRoute() {
+export default function ShopRoute() {
   const data = useLoaderData<LoaderData>();
 
   return (
-    <ProjectDisplay project={data.project} isOwner={data.isOwner} />
+    <ShopDisplay shop={data.shop} isOwner={data.isOwner} />
   );
 }
 
@@ -107,14 +107,14 @@ export function CatchBoundary() {
     case 404: {
       return (
         <div className="error-container">
-          Huh? What the heck is {params.projectId}?
+          Huh? What the heck is {params.shopId}?
         </div>
       );
     }
     case 401: {
       return (
         <div className="error-container">
-          Sorry, but {params.projectId} is not your project.
+          Sorry, but {params.shopId} is not your shop.
         </div>
       );
     }
@@ -127,8 +127,8 @@ export function CatchBoundary() {
 export function ErrorBoundary({ error }: { error: Error }) {
   console.error(error);
 
-  const { projectId } = useParams();
+  const { shopId } = useParams();
   return (
-    <div className="error-container">{`There was an error loading project by the id ${projectId}. Sorry.`}</div>
+    <div className="error-container">{`There was an error loading shop by the id ${shopId}. Sorry.`}</div>
   );
 }

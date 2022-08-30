@@ -1,18 +1,21 @@
+import { Joke } from "@prisma/client";
 import type {
   LoaderFunction,
   ActionFunction,
   MetaFunction,
 } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+import {
+  json,
+  redirect
+} from "@remix-run/node";
 import {
   useLoaderData,
   useCatch,
   useParams,
 } from "@remix-run/react";
-import type { Joke } from "@prisma/client";
-import { prisma } from "~/utils/prisma.server";
-import { requireUserId } from "~/utils/auth.server";
 import { JokeDisplay } from "~/components/joke";
+import { requireUserId } from "~/utils/middlewares";
+import { prisma } from "~/utils/prisma.server";
 
 export const meta: MetaFunction = ({ data }: { data: LoaderData | undefined}) => {
   if (!data) {
@@ -35,10 +38,10 @@ export const loader: LoaderFunction = async ({
   params,
 }) => {
   const userId = await requireUserId(request);
-
   const joke = await prisma.joke.findUnique({
     where: { id: params.jokeId }
   });
+
   if (!joke) {
     throw new Response("What a joke! Not found.", { status: 404 });
   }
@@ -47,6 +50,7 @@ export const loader: LoaderFunction = async ({
     joke,
     isOwner: userId === joke.jokesterId,
   };
+
   return json(data);
 };
 

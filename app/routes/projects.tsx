@@ -8,17 +8,16 @@ import {
   Outlet,
   useLoaderData,
 } from "@remix-run/react";
-
-import { prisma } from "~/utils/prisma.server";
 import stylesUrl from "~/styles/jokes.css";
-import { getUser } from "~/utils/auth.server";
+import { getAuthenticatedUser } from "~/utils/auth.server";
+import { prisma } from "~/utils/prisma.server";
 
 export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
 };
 
 type LoaderData = {
-  user: Awaited<ReturnType<typeof getUser>>;
+  user: Awaited<ReturnType<typeof getAuthenticatedUser>>;
   items: Array<{ id: string; name: string, code: string, domain: string }>;
 };
 
@@ -31,12 +30,13 @@ export const loader: LoaderFunction = async ({
     select: { id: true, name: true, code: true, domain: true },
   });
   
-  const user = await getUser(request);
+  const user = await getAuthenticatedUser(request);
   
   const data: LoaderData = {
     items,
     user,
   };
+  
   return json(data);
 };
 

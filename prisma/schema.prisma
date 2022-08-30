@@ -27,6 +27,19 @@ model User {
   // profile      Profile
   jokes     Joke[]
   projects  Project[]
+  Shop      Shop[]
+}
+
+model Shop {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String   @unique
+  access    String
+  secret    String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Joke {

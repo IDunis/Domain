@@ -8,10 +8,29 @@ import {
 import type { Joke } from "@prisma/client";
 
 import { prisma } from "~/utils/prisma.server";
+import { getShop, requireAccessToken } from "~/utils/auth.server";
 
-type LoaderData = { randomJoke: Joke };
+const query = `
+{
+  products(first: 5) {
+    edges {
+      node {
+        id
+        handle
+        title
+        description
+      }
+    }
+    pageInfo {
+      hasNextPage
+    }
+  }
+}
+`;
 
-export const loader: LoaderFunction = async () => {
+type LoaderData = { randomJoke: Joke, products: any };
+
+export const loader: LoaderFunction = async ({ request }) => {
   const count = await prisma.joke.count();
   const randomRowNumber = Math.floor(Math.random() * count);
   const [randomJoke] = await prisma.joke.findMany({
@@ -21,16 +40,49 @@ export const loader: LoaderFunction = async () => {
   if (!randomJoke) {
     throw new Response("No random joke found", { status: 404 });
   }
-  const data: LoaderData = { randomJoke };
-  return json(data);
+  
+  const accessToken = await requireAccessToken(request);
+  const shop = await getShop(request);
+  try {
+    const response = await fetch(
+      `https://${shop}/admin/api/2022-01/graphql.json`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/graphql",
+          "X-Shopify-Access-Token": accessToken,
+        },
+        body: query,
+      }
+    );
+    const res = await response.json();
+    const {
+      data: {
+        products: { edges },
+      },
+    } = res;
+    return { randomJoke, products: edges };
+  } catch (e) {
+    return json({});
+  }
+  // const data: LoaderData = { randomJoke, edges };
+  // return json(data);
 };
 
 export default function JokesIndexRoute() {
   const data = useLoaderData<LoaderData>();
+  console.log(data);
 
   return (
     <div>
       <p>Here's a random joke:</p>
+      <ul>
+      {data.products.map(({ node: product }: any) => (
+        <li key={product.id}>
+          <Link to={product.id}>{product.title}</Link>
+        </li>
+      ))}
+      </ul>
       <p>{data.randomJoke.content}</p>
       <Link to={data.randomJoke.id}>
         "{data.randomJoke.name}" Permalink
