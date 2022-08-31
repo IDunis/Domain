@@ -16,7 +16,7 @@ import {
   useActionData,
   useTransition,
   useSearchParams,
-  Link,
+  // Link,
 } from "@remix-run/react";
 
 import {
@@ -28,6 +28,27 @@ import {
 } from "~/utils/validators.server";
 import stylesUrl from "~/styles/login.css";
 import { getAuthenticatedUser, HOME_ROUTE, login, register } from "~/utils/auth.server";
+import {
+  Flex,
+  Heading,
+  Input,
+  Button,
+  InputGroup,
+  Stack,
+  InputLeftElement,
+  chakra,
+  Box,
+  Link,
+  Avatar,
+  FormControl,
+  FormHelperText,
+  InputRightElement,
+  FormLabel,
+  Switch,
+  useColorMode,
+  useColorModeValue,
+} from "@chakra-ui/react";
+import { FaUserAlt, FaLock } from "react-icons/fa";
 
 export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
@@ -36,8 +57,7 @@ export const links: LinksFunction = () => {
 export const meta: MetaFunction = () => {
   return {
     title: "Remix Jokes | Login",
-    description:
-      "Login to submit your own jokes to Remix Jokes!",
+    description: "Login to submit your own jokes to Remix Jokes!",
   };
 };
 
@@ -85,6 +105,9 @@ enum FormType {
   REGISTER = "register",
   LOGIN = "login"
 };
+
+const CFaUserAlt = chakra(FaUserAlt);
+const CFaLock = chakra(FaLock);
 
 const badRequest = (data: ActionData) => json(data, { status: 400 });
 
@@ -250,185 +273,284 @@ function ValidationMessage({ error, isSubmitting }: any) {
   );
 }
 
-export default function Login() {
-  const actionData = useActionData<ActionData>();
-  const transition = useTransition();
-  const [searchParams] = useSearchParams();
-  const firstLoad = useRef(true);
+// export default function Login() {
+//   const actionData = useActionData<ActionData>();
+//   const transition = useTransition();
+//   const [searchParams] = useSearchParams();
+//   const firstLoad = useRef(true);
 
-  const [action, setAction] = useState(actionData?.fields?.loginType || FormType.LOGIN);
-  const [errors, setErrors] = useState(actionData?.fieldErrors || {})
+//   const [action, setAction] = useState(actionData?.fields?.loginType || FormType.LOGIN);
+//   const [errors, setErrors] = useState(actionData?.fieldErrors || {})
 
-  useEffect(() => {
-    if (!firstLoad.current) {
-      setErrors({});
-    }
-  }, [action]);
+//   useEffect(() => {
+//     if (!firstLoad.current) {
+//       setErrors({});
+//     }
+//   }, [action]);
 
-  useEffect(() => {
-    // We don't want to reset errors on page load because we want to see them
-    firstLoad.current = false
-  }, []);
+//   useEffect(() => {
+//     // We don't want to reset errors on page load because we want to see them
+//     firstLoad.current = false
+//   }, []);
+
+//   return (
+//     <div className="container">
+//       <div className="content" data-light="">
+//         <h1 style={{textTransform: "uppercase"}}>{action === FormType.LOGIN ? FormType.LOGIN : FormType.REGISTER}</h1>
+//         <form method="post">
+//           <input
+//             type="hidden"
+//             name="redirectTo"
+//             value={searchParams.get("redirectTo") ?? undefined}
+//           />
+//           <fieldset>
+//             <legend className="sr-only">
+//               Login or Register?
+//             </legend>
+//             <label>
+//               <input
+//                 type="radio"
+//                 name="loginType"
+//                 value="login"
+//                 defaultChecked={action === FormType.LOGIN}
+//                 onChange={() => setAction(FormType.LOGIN)}
+//               />{" "}
+//               Login
+//             </label>
+//             <label>
+//               <input
+//                 type="radio"
+//                 name="loginType"
+//                 value="register"
+//                 defaultChecked={action === FormType.REGISTER}
+//                 onChange={() => setAction(FormType.REGISTER)}
+//               />{" "}
+//               Register
+//             </label>
+//           </fieldset>
+//           <div>
+//             <label htmlFor="username-input">Username</label>
+//             <input
+//               type="text"
+//               id="username-input"
+//               name="username"
+//               defaultValue={actionData?.fields?.username}
+//               aria-invalid={Boolean(errors?.username)}
+//               aria-errormessage={errors?.username ? "username-error" : undefined}
+//             />
+//             {errors?.username ? (
+//               <ValidationMessage
+//                 isSubmitting={transition.state === "submitting"}
+//                 error={errors?.username}
+//               />
+//             ) : null}
+//           </div>
+//           <div>
+//             <label htmlFor="password-input">Password</label>
+//             <input
+//               id="password-input"
+//               name="password"
+//               defaultValue={actionData?.fields?.password}
+//               type="password"
+//               aria-invalid={Boolean(errors?.password) || undefined}
+//               aria-errormessage={errors?.password ? "password-error" : undefined}
+//             />            
+//             {errors?.password ? (
+//               <ValidationMessage
+//                 isSubmitting={transition.state === "submitting"}
+//                 error={errors?.password}
+//               />
+//             ) : null}
+//           </div>
+//           {action === FormType.REGISTER && (
+//             <>
+//               <div>
+//               <label htmlFor="password-input">Email</label>
+//               <input
+//                 id="password-input"
+//                 name="email"
+//                 defaultValue={actionData?.fields?.email}
+//                 type="email"
+//                 aria-invalid={Boolean(errors?.email) || undefined}
+//                 aria-errormessage={errors?.email ? "email-error" : undefined}
+//               />            
+//               {errors?.email ? (
+//                 <ValidationMessage
+//                   isSubmitting={transition.state === "submitting"}
+//                   error={errors?.email}
+//                 />
+//               ) : null}
+//             </div>
+//           </>
+//           )}
+//           {action === FormType.REGISTER && (
+//             <>
+//               <div>
+//               <label htmlFor="firstName-input">First Name</label>
+//               <input
+//                 id="firstName-input"
+//                 name="firstName"
+//                 defaultValue={actionData?.fields?.firstName}
+//                 type="text"
+//                 aria-invalid={Boolean(errors?.firstName) || undefined}
+//                 aria-errormessage={errors?.firstName ? "firstName-error" : undefined}
+//               />            
+//               {errors?.firstName ? (
+//                 <ValidationMessage
+//                   isSubmitting={transition.state === "submitting"}
+//                   error={errors?.firstName}
+//                 />
+//               ) : null}
+//             </div>
+//           </>
+//           )}
+//           {action === FormType.REGISTER && (
+//             <>
+//               <div>
+//               <label htmlFor="lastName-input">Last Name</label>
+//               <input
+//                 id="lastName-input"
+//                 name="lastName"
+//                 defaultValue={actionData?.fields?.lastName}
+//                 type="text"
+//                 aria-invalid={Boolean(errors?.lastName) || undefined}
+//                 aria-errormessage={errors?.lastName ? "lastName-error" : undefined}
+//               />            
+//               {errors?.lastName ? (
+//                 <ValidationMessage
+//                   isSubmitting={transition.state === "submitting"}
+//                   error={errors?.lastName}
+//                 />
+//               ) : null}
+//             </div>
+//           </>
+//           )}            
+//           {actionData?.formError ? (
+//             <ValidationForm
+//               isSubmitting={transition.state === "submitting"}
+//               error={actionData?.formError}
+//             />
+//           ) : null}
+//           <button type="submit" className="button">
+//             Submit
+//           </button>
+//         </form>
+//       </div>
+//       <div className="links">
+//         <ul>
+//           <li>
+//             <Link to="/">Home</Link>
+//           </li>
+//           <li>
+//             <Link to="/jokes">Jokes</Link>
+//           </li>
+//             <li>
+//               <Link to="/projects">Projects</Link>
+//             </li>
+//             <li>
+//               <Link to="/shops">Shops</Link>
+//             </li>
+//         </ul>
+//       </div>
+//     </div>
+//   );
+// }
+
+const Login = () => {
+  const [showPassword, setShowPassword] = useState(false);
+
+  const { toggleColorMode } = useColorMode();
+  const formBackground = useColorModeValue('gray.100', 'gray.700');
+  const handleShowClick = () => setShowPassword(!showPassword);
 
   return (
-    <div className="container">
-      <div className="content" data-light="">
-        <h1 style={{textTransform: "uppercase"}}>{action === FormType.LOGIN ? FormType.LOGIN : FormType.REGISTER}</h1>
-        <form method="post">
-          <input
-            type="hidden"
-            name="redirectTo"
-            value={searchParams.get("redirectTo") ?? undefined}
-          />
-          <fieldset>
-            <legend className="sr-only">
-              Login or Register?
-            </legend>
-            <label>
-              <input
-                type="radio"
-                name="loginType"
-                value="login"
-                defaultChecked={action === FormType.LOGIN}
-                onChange={() => setAction(FormType.LOGIN)}
-              />{" "}
-              Login
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="loginType"
-                value="register"
-                defaultChecked={action === FormType.REGISTER}
-                onChange={() => setAction(FormType.REGISTER)}
-              />{" "}
-              Register
-            </label>
-          </fieldset>
-          <div>
-            <label htmlFor="username-input">Username</label>
-            <input
-              type="text"
-              id="username-input"
-              name="username"
-              defaultValue={actionData?.fields?.username}
-              aria-invalid={Boolean(errors?.username)}
-              aria-errormessage={errors?.username ? "username-error" : undefined}
+    <Flex
+      flexDirection="column"
+      width="100wh"
+      height="100vh"
+      justifyContent="center"
+      alignItems="center"
+      bg={formBackground}
+    >
+      <Stack
+        flexDir="column"
+        mb="2"
+        justifyContent="center"
+        alignItems="center"
+      >
+        <Avatar bg="teal.500" />
+        <Heading color="teal.400">Welcome</Heading>
+        <Box minW={{ base: "90%", md: "468px" }}>
+          <form>
+            <Stack
+              spacing={4}
+              p="1rem"
+              backgroundColor="whiteAlpha.900"
+              boxShadow="md"
+            >
+              <FormControl>
+                <InputGroup>
+                  <InputLeftElement
+                    pointerEvents="none"
+                    children={<CFaUserAlt color="gray.300" />}
+                  />
+                  <Input type="email" placeholder="email address" />
+                </InputGroup>
+              </FormControl>
+              <FormControl>
+                <InputGroup>
+                  <InputLeftElement
+                    pointerEvents="none"
+                    color="gray.300"
+                    children={<CFaLock color="gray.300" />}
+                  />
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Password"
+                  />
+                  <InputRightElement width="4.5rem">
+                    <Button h="1.75rem" size="sm" onClick={handleShowClick}>
+                      {showPassword ? "Hide" : "Show"}
+                    </Button>
+                  </InputRightElement>
+                </InputGroup>
+                <FormHelperText textAlign="right">
+                  <Link>forgot password?</Link>
+                </FormHelperText>
+              </FormControl>
+              <Button
+                borderRadius={0}
+                type="submit"
+                variant="solid"
+                colorScheme="teal"
+                width="full"
+              >
+                Login
+              </Button>
+            </Stack>
+          </form>
+        </Box>
+      </Stack>
+      <Box>
+        New to us?{" "}
+        <Link color="teal.500" href="#">
+          Sign Up
+        </Link>
+
+        <FormControl display="flex" alignItems="center">
+            <FormLabel htmlFor="dark_mode" mb="0">
+              Enable Dark Mode?
+            </FormLabel>
+            <Switch
+              id="dark_mode"
+              colorScheme="teal"
+              size="lg"
+              onChange={toggleColorMode}
             />
-            {errors?.username ? (
-              <ValidationMessage
-                isSubmitting={transition.state === "submitting"}
-                error={errors?.username}
-              />
-            ) : null}
-          </div>
-          <div>
-            <label htmlFor="password-input">Password</label>
-            <input
-              id="password-input"
-              name="password"
-              defaultValue={actionData?.fields?.password}
-              type="password"
-              aria-invalid={Boolean(errors?.password) || undefined}
-              aria-errormessage={errors?.password ? "password-error" : undefined}
-            />            
-            {errors?.password ? (
-              <ValidationMessage
-                isSubmitting={transition.state === "submitting"}
-                error={errors?.password}
-              />
-            ) : null}
-          </div>
-          {action === FormType.REGISTER && (
-            <>
-              <div>
-              <label htmlFor="password-input">Email</label>
-              <input
-                id="password-input"
-                name="email"
-                defaultValue={actionData?.fields?.email}
-                type="email"
-                aria-invalid={Boolean(errors?.email) || undefined}
-                aria-errormessage={errors?.email ? "email-error" : undefined}
-              />            
-              {errors?.email ? (
-                <ValidationMessage
-                  isSubmitting={transition.state === "submitting"}
-                  error={errors?.email}
-                />
-              ) : null}
-            </div>
-          </>
-          )}
-          {action === FormType.REGISTER && (
-            <>
-              <div>
-              <label htmlFor="firstName-input">First Name</label>
-              <input
-                id="firstName-input"
-                name="firstName"
-                defaultValue={actionData?.fields?.firstName}
-                type="text"
-                aria-invalid={Boolean(errors?.firstName) || undefined}
-                aria-errormessage={errors?.firstName ? "firstName-error" : undefined}
-              />            
-              {errors?.firstName ? (
-                <ValidationMessage
-                  isSubmitting={transition.state === "submitting"}
-                  error={errors?.firstName}
-                />
-              ) : null}
-            </div>
-          </>
-          )}
-          {action === FormType.REGISTER && (
-            <>
-              <div>
-              <label htmlFor="lastName-input">Last Name</label>
-              <input
-                id="lastName-input"
-                name="lastName"
-                defaultValue={actionData?.fields?.lastName}
-                type="text"
-                aria-invalid={Boolean(errors?.lastName) || undefined}
-                aria-errormessage={errors?.lastName ? "lastName-error" : undefined}
-              />            
-              {errors?.lastName ? (
-                <ValidationMessage
-                  isSubmitting={transition.state === "submitting"}
-                  error={errors?.lastName}
-                />
-              ) : null}
-            </div>
-          </>
-          )}            
-          {actionData?.formError ? (
-            <ValidationForm
-              isSubmitting={transition.state === "submitting"}
-              error={actionData?.formError}
-            />
-          ) : null}
-          <button type="submit" className="button">
-            Submit
-          </button>
-        </form>
-      </div>
-      <div className="links">
-        <ul>
-          <li>
-            <Link to="/">Home</Link>
-          </li>
-          <li>
-            <Link to="/jokes">Jokes</Link>
-          </li>
-            <li>
-              <Link to="/projects">Projects</Link>
-            </li>
-            <li>
-              <Link to="/shops">Shops</Link>
-            </li>
-        </ul>
-      </div>
-    </div>
+          </FormControl>
+      </Box>
+    </Flex>
   );
-}
+};
+
+export default Login;
